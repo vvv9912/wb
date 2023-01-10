@@ -30,19 +30,19 @@ func main() {
 	}
 	subject := "foo"
 	for i := 1; ; i++ {
-		//ii := i % 2
+		ii := i % 2
 
-		//if ii == 0 {
-		//	message.OrderUid = fmt.Sprintf("%d", rand.Int())
-		//	fmt.Println(message.OrderUid)
-		//	messageinjson, err = json.Marshal(message)
-		//	if err != nil {
-		//		fmt.Println("Error: ", err.Error())
-		//		return
-		//	}
-		//} else {
-		messageinjson = []byte(string(rand.Int()))
-		//}
+		if ii == 0 {
+			message.OrderUid = fmt.Sprintf("%d", i)
+			fmt.Println(message.OrderUid)
+			messageinjson, err = json.Marshal(message)
+			if err != nil {
+				fmt.Println("Error: ", err.Error())
+				return
+			}
+		} else {
+			messageinjson = []byte(string(rand.Int()))
+		}
 
 		err = sc.Publish(subject, []byte(messageinjson))
 		if err != nil {
