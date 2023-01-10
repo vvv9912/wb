@@ -9,7 +9,6 @@ import (
 	"fmt"
 	_ "github.com/lib/pq"
 	"github.com/nats-io/stan.go"
-	"time"
 )
 
 func main() {
@@ -41,16 +40,17 @@ func main() {
 	fmt.Printf("Старт")
 	yes := 0
 	no := 0
+
 	sub, err := sc.Subscribe("foo", func(m *stan.Msg) {
 		rowsAffected, err := addDB(m.Data)
 		if err != nil {
+			fmt.Printf("\nerr to bd: \n", err.Error())
+			no++
+		} else if err == nil {
+
 			fmt.Printf("add: %d \n", rowsAffected)
 			yes++
 		}
-		//} else if err == nil {
-		//	fmt.Printf("\nerr to bd: \n", err.Error())
-		//	no++
-		//}
 
 		//fmt.Printf("Received a message: %s\n", string(m.Data))
 	})
@@ -60,7 +60,9 @@ func main() {
 		fmt.Printf("error in subscribe: %v", err)
 		return
 	}
-	time.Sleep(10 + time.Second)
+	fmt.Printf("yes:%d", yes)
+	fmt.Printf("no:%d", no)
+	fmt.Scanf(" ")
 	sub.Unsubscribe()
 	fmt.Printf("yes:%d", yes)
 	fmt.Printf("no:%d", no)
@@ -86,6 +88,49 @@ func addDB(messagetojson []byte) (int64, error) {
 	err = db.Ping()
 	if err != nil {
 		fmt.Println("Error 2:", err.Error())
+		return 0, err
+	}
+	// получаем сколько записано => добавляем до того кол-ва
+	rows, err := db.Query("select order_uid, data from message")
+	if err != nil {
+		fmt.Println("Error 3:", err.Error())
+		return 0, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var order_uid string
+		err := rows.Scan(&order_uid)
+		if err != nil {
+			fmt.Println("Error 4: ", err.Error())
+			return 0, err
+		}
+		if order_uid == message.OrderUid {
+			//fmt.Println("Error: такой OrderUid существует\n")
+			err2 := errors.New("Error: такой OrderUid существует:")
+			return 0, err2
+		}
+	}
+
+	result, err := db.Exec("insert into message (order_uid, data) values ($1,$2)", message.OrderUid, messagetojson)
+	if err != nil {
+		fmt.Println("Error 5:", err.Error())
+		return 0, err
+	}
+
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		fmt.Println("Error 6:", err.Error())
+		return 0, err
+	}
+	//fmt.Println(rowsAffected)
+	return rowsAffected, nil
+}
+func get(messagetojson []byte) (int64, error) {
+	connStr := "postgres://postgres:postgres@localhost/postgres?sslmode=disable"
+	db, err := sql.Open("postgres", connStr)
+	defer db.Close()
+	if err != nil {
+		fmt.Println("Error 1:", err.Error())
 		return 0, err
 	}
 
