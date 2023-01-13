@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/nats-io/stan.go"
+	"math/rand"
 	"os"
+	"testing"
 )
 
-// nats-streaming-server -V
-func main() {
-
+func TestXxx(t *testing.T) {
 	clusterID := "test-cluster"
 	clientID := "Produser"
 
@@ -28,10 +28,26 @@ func main() {
 		return
 	}
 	subject := "foo"
-	err = sc.Publish(subject, []byte(messageinjson))
+	for i := 1; ; i++ {
+		if (i % 2) == 0 {
+			message.OrderUid = fmt.Sprintf("%d", i)
+			fmt.Println(message.OrderUid)
+			messageinjson, err = json.Marshal(message)
+			if err != nil {
+				fmt.Println("Error: ", err.Error())
+				return
+			}
+		} else {
+			messageinjson = []byte(fmt.Sprintf("%d", rand.Int()))
+		}
 
-	if err != nil {
-		fmt.Printf(err.Error())
-		return
+		err = sc.Publish(subject, []byte(messageinjson))
+		if err != nil {
+			fmt.Printf(err.Error())
+			return
+		}
+		fmt.Println(i)
+		_ = sc
 	}
+
 }
