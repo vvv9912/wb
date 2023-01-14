@@ -8,18 +8,22 @@ import (
 	"os"
 )
 
-// nats-streaming-server -V
 func main() {
-
 	clusterID := "test-cluster"
 	clientID := "Produser"
+	NatsUrl := "0.0.0.0:4222"
+	subject := "foo"
 
-	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL("0.0.0.0:4222"))
+	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(NatsUrl))
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
-	defer sc.Close()
-	//test start
+	defer func(sc stan.Conn) {
+		err := sc.Close()
+		if err != nil {
+			fmt.Printf(err.Error()) //todo
+		}
+	}(sc)
 	messageinjson, err := os.ReadFile("message/model.json")
 	var message modelmessage.ModelMessage
 	err = json.Unmarshal(messageinjson, &message)
@@ -27,7 +31,7 @@ func main() {
 		fmt.Println("Error: Неправильное сообщение (Неудалось распарсить) \n ", err.Error())
 		return
 	}
-	subject := "foo"
+
 	err = sc.Publish(subject, []byte(messageinjson))
 
 	if err != nil {

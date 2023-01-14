@@ -2,6 +2,7 @@ package main
 
 import (
 	"client_consumer/message"
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/lib/pq"
@@ -11,39 +12,47 @@ import (
 	"net/http"
 )
 
-func getCache(c *cache.Cache, key string) (interface{}, bool) {
-	data, found := c.Get(key)
-	return data, found
-}
-
 type Cache struct {
 	cache *cache.Cache
 }
 
-func (cache Cache) getHttpAnswer(w http.ResponseWriter, r *http.Request) {
+func (c Cache) getCache(key string) (interface{}, bool) {
+	data, found := c.cache.Get(key)
+	return data, found
+}
+func (c Cache) getHttpAnswer(w http.ResponseWriter, r *http.Request) {
 	key := r.RequestURI
-	data, found := getCache(cache.cache, key[4:])
+	data, found := c.getCache(key[4:])
 	if found {
-		io.WriteString(w, string(data.([]byte))+"\n")
+		_, err := io.WriteString(w, string(data.([]byte))+"\n")
+		if err != nil {
+			return
+		}
 	} else {
-		io.WriteString(w, "no found\n")
+		_, err := io.WriteString(w, "no found\n")
+		if err != nil {
+			return
+		}
 	}
 }
 func main() {
-	//host := "localhost"
-	//port := "5432"
-	//database := "postgres"
-	//username := "postgres"
-	//password := "postgres"
+
 	clusterID := "test-cluster"
 	clientID := "Consumer"
+	NatsUrl := "0.0.0.0:4222"
+	httpUrl := "127.0.0.1:3333"
 
 	var c Cache
 	c.cache = cache.New(cache.DefaultExpiration, 0)
 	http.HandleFunc("/id/", c.getHttpAnswer)
 	var db tdb
 	db.openDB()
-	defer db.db.Close()
+	defer func(db *sql.DB) {
+		err := db.Close()
+		if err != nil {
+			fmt.Printf(err.Error()) //todo
+		}
+	}(db.db)
 	row := db.db.QueryRow("SELECT COUNT(*) FROM  message")
 	var count int
 	err := row.Scan(&count)
@@ -52,18 +61,23 @@ func main() {
 		return
 	}
 	go db.bdtocache(c, count)
-	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL("0.0.0.0:4222"))
+	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(NatsUrl))
 	if err != nil {
 		fmt.Printf(err.Error())
 		return
 	}
-	defer sc.Close()
+	defer func(sc stan.Conn) {
+		err := sc.Close()
+		if err != nil {
+			fmt.Printf(err.Error()) //todo
+		}
+	}(sc)
 	fmt.Printf("Старт")
 
 	sub, err := sc.Subscribe("foo", func(m *stan.Msg) {
 		rowsAffected, err := db.addDB(m.Data)
 		if err != nil {
-			fmt.Printf("\nerr to bd: \n", err.Error())
+			fmt.Printf("err to bd: \n", err.Error())
 		} else if err == nil {
 			fmt.Printf("add: %d \n", rowsAffected)
 			var msg modelmessage.ModelMessage
@@ -80,12 +94,17 @@ func main() {
 
 		}
 	})
-	defer sub.Unsubscribe()
+	defer func(sub stan.Subscription) {
+		err := sub.Unsubscribe()
+		if err != nil {
+			fmt.Printf(err.Error()) //todo
+		}
+	}(sub)
 	if err != nil {
 		fmt.Printf("error in subscribe: %v", err)
 		return
 	}
-	err = http.ListenAndServe("127.0.0.1:3333", nil)
+	err = http.ListenAndServe(httpUrl, nil)
 	if err != nil {
 		fmt.Printf(err.Error()) //to do
 		return

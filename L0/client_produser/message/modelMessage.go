@@ -1,4 +1,4 @@
-package modelmessage
+package modelmessageitems
 
 import "time"
 

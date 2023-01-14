@@ -42,15 +42,20 @@ func (db tdb) addDB(messagetojson []byte) (int64, error) {
 	var message modelmessage.ModelMessage
 	err := json.Unmarshal(messagetojson, &message)
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err.Error()) //todo
 		return 0, err
 	}
 	rows, err := db.db.Query("select order_uid from message")
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err.Error()) //todo
 		return 0, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			fmt.Println(err.Error()) //todo
+		}
+	}(rows)
 	result, err := db.db.Exec("insert into message (order_uid, data) values ($1,$2)", message.OrderUid, messagetojson)
 	if err != nil {
 		fmt.Println(err.Error())
@@ -75,10 +80,15 @@ func (db tdb) getDB(row int) (string, []byte, error) {
 
 	rows, err := db.db.Query("select order_uid, data from message")
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err.Error()) //todo
 		return "", nil, err
 	}
-	defer rows.Close()
+	defer func(rows *sql.Rows) {
+		err := rows.Close()
+		if err != nil {
+			fmt.Println(err.Error()) //todo
+		}
+	}(rows)
 	for rows.Next() {
 		row--
 		if row == 0 {

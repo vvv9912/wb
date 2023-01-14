@@ -10,16 +10,22 @@ import (
 	"testing"
 )
 
+// Формируется последовательность из сообщений: сначала посылается правильное сообщение, затем неправильное
 func TestXxx(t *testing.T) {
 	clusterID := "test-cluster"
 	clientID := "Produser"
-
-	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL("0.0.0.0:4222"))
+	NatsUrl := "0.0.0.0:4222"
+	subject := "foo"
+	sc, err := stan.Connect(clusterID, clientID, stan.NatsURL(NatsUrl))
 	if err != nil {
 		fmt.Printf(err.Error())
 	}
-	defer sc.Close()
-	//test start
+	defer func(sc stan.Conn) {
+		err := sc.Close()
+		if err != nil {
+			fmt.Printf(err.Error()) //todo
+		}
+	}(sc)
 	messageinjson, err := os.ReadFile("message/model.json")
 	var message modelmessage.ModelMessage
 	err = json.Unmarshal(messageinjson, &message)
@@ -27,7 +33,7 @@ func TestXxx(t *testing.T) {
 		fmt.Println("Error: Неправильное сообщение (Неудалось распарсить) \n ", err.Error())
 		return
 	}
-	subject := "foo"
+
 	for i := 1; ; i++ {
 		if (i % 2) == 0 {
 			message.OrderUid = fmt.Sprintf("%d", i)
@@ -47,7 +53,6 @@ func TestXxx(t *testing.T) {
 			return
 		}
 		fmt.Println(i)
-		_ = sc
 	}
 
 }
