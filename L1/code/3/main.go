@@ -6,21 +6,21 @@ import (
 )
 
 func main() {
-	massiv := []int{2, 4, 6, 8, 10}
-	sum := sumsquares(massiv)
+	arr := []int{2, 4, 6, 8, 10}
+	sum := sumsquares(arr)
 	fmt.Println(sum)
 }
-func sumsquares(massiv []int) int {
+func sumsquares(arr []int) int {
 	var sum int
 	var wg sync.WaitGroup
-	//var rw sync.RWMutex
-	wg.Add(len(massiv))
-	for i := range massiv {
+	var rw sync.RWMutex
+	wg.Add(len(arr))
+	for i := range arr {
 		go func(i int) {
-			//rw.Lock()
-			sum += massiv[i] * massiv[i]
+			rw.Lock()
+			sum += arr[i] * arr[i]
 			wg.Done()
-			//defer rw.Unlock()
+			defer rw.Unlock()
 		}(i)
 	}
 	wg.Wait()

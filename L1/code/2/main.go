@@ -7,12 +7,12 @@ import (
 )
 
 func main() {
-	massiv := []int{2, 4, 6, 8, 10}
+	arr := []int{2, 4, 6, 8, 10}
 	var wg sync.WaitGroup
-	wg.Add(len(massiv))
-	for i := range massiv {
+	wg.Add(len(arr))
+	for i := range arr {
 		go func(i int) {
-			os.Stdout.WriteString(fmt.Sprintf("%d\n", massiv[i]*massiv[i]))
+			os.Stdout.WriteString(fmt.Sprintf("%d\n", arr[i]*arr[i]))
 			wg.Done()
 		}(i)
 
