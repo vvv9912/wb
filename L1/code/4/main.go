@@ -16,11 +16,11 @@ import (
 способ завершения работы всех воркеров.
 */
 func main() {
-	nworker := 100
+	nworker := 3
 	//arr := []int{2, 4, 6, 8, 10}
 	//arr = "sssss"
-	interfaceCh := make(chan interface{})
-
+	interfaceCh := make(chan interface{}, nworker)
+	//
 	go func() {
 		for {
 			interfaceCh <- rand.Int()
