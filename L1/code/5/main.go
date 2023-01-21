@@ -12,28 +12,20 @@ import (
 канал, а с другой стороны канала — читать. По истечению N секунд программа
 должна завершаться.
 */
-//todo
 func main() {
 	interfaceCh := make(chan interface{})
-
-	time.AfterFunc(10*time.Second, func() {
-		fmt.Printf("Таймер выполнен")
+	time.AfterFunc(10*time.Second, func() { //таймер завершение программы
 		close(interfaceCh) //закрываем канал
 		os.Exit(1)
 	})
 	go worker(interfaceCh)
 	for {
 		interfaceCh <- rand.Int()
-		fmt.Printf("Отправлено\n")
-		time.Sleep(time.Second)
 	}
-
-	//close(interfaceCh) //закрываем канал
 
 }
 
 func worker(interfaceCh chan interface{}) {
-	//var wg sync.WaitGroup
 	for {
 		val := <-interfaceCh
 		_, err := os.Stdout.WriteString(fmt.Sprintf("%v\n", val))
@@ -41,5 +33,4 @@ func worker(interfaceCh chan interface{}) {
 			return
 		}
 	}
-	//wg.Wait()
 }
